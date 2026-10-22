@@ -19,7 +19,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
-app.get('/api/health', (req, res) => {
+app.get('/', (req, res) => {
+    res.send("API MERN de Mohamed Iraqi - voir /api/health et /api/items");
+});
+
+app.get('/api/health', async (req, res) => {
+    await connectDB().catch(() => null);
     res.json({
         status: "ok",
         message: "Le serveur repond",
