@@ -23,6 +23,13 @@ app.get('/', (req, res) => {
     res.send("API MERN de Mohamed Iraqi - voir /api/health et /api/items");
 });
 
+app.get('/api', (req, res) => {
+    res.json({
+        message: "API MERN de Mohamed Iraqi",
+        routes: ["GET /api/health", "GET /api/items", "POST /api/items"]
+    });
+});
+
 app.get('/api/health', async (req, res) => {
     await connectDB().catch(() => null);
     res.json({
