@@ -14,17 +14,14 @@ Petite application MERN : une API Node.js/Express connectée à MongoDB Atlas vi
 ```
 mern-iraqi-mohamed/
 ├── back/
-│   ├── config/db.js       # connexion Mongoose
-│   ├── models/Item.js     # schéma et modèle Mongoose
+│   ├── config/db.js       # connexion Mongoose, schéma et modèle Item
 │   ├── index.js           # serveur Express et routes
 │   ├── package.json
-│   └── .env.example       # variables d'environnement (valeurs fictives)
+│   └── .gitignore
 ├── front/
 │   ├── index.html
 │   ├── index.css
-│   ├── index.js           # appels API avec fetch()
-│   └── config.js          # URL du backend (configuration unique)
-├── .gitignore
+│   └── index.js           # URL des backends + appels API avec fetch()
 └── README.md
 ```
 
@@ -40,7 +37,13 @@ mern-iraqi-mohamed/
 git clone <URL_DU_DEPOT_GITHUB>
 cd mern-iraqi-mohamed/back
 npm install
-cp .env.example .env   # puis remplir les vraies valeurs dans .env
+```
+
+Créer ensuite `back/.env` :
+
+```
+MONGODB_URI=mongodb+srv://<utilisateur>:<mot_de_passe>@<cluster>/<base>?retryWrites=true&w=majority
+PORT=3000
 ```
 
 ## Commandes
@@ -52,7 +55,7 @@ Dans `back/` :
 | `npm start`       | Démarre le serveur avec Node.js (production) |
 | `npm run mohamed` | Démarre le serveur avec nodemon (développement) |
 
-Frontend : ouvrir `front/index.html` avec un serveur statique (par ex. l'extension Live Server de VS Code sur le port 5500). L'URL du backend se règle dans `front/config.js`.
+Frontend : ouvrir `front/index.html` avec un serveur statique (par ex. l'extension Live Server de VS Code sur le port 5500). Les URL des backends se règlent en haut de `front/index.js`.
 
 ## Variables d'environnement
 
@@ -93,19 +96,19 @@ Corps attendu pour `POST /api/items` :
 
 1. Importer le dépôt GitHub dans Vercel.
 2. Root Directory : `front`, Framework Preset : `Other` (site statique, pas de build).
-3. Renseigner les URL des backends dans `front/config.js`.
+3. Renseigner les URL des backends en haut de `front/index.js`.
 
 ### Backend sur Vercel
 
 1. Nouveau projet Vercel à partir du même dépôt, Root Directory : `back`.
-2. `back/vercel.json` route toutes les requêtes vers `index.js`, qui exporte l'app Express.
+2. `index.js` exporte l'app Express (`module.exports = app`).
 3. Variables (Settings → Environment Variables) : `MONGODB_URI`, `NODE_ENV=production`, `ALLOWED_ORIGINS=<URL du frontend Vercel>`.
 4. Tester : `https://<backend-vercel>/api/health`.
 
 ### Backend sur Railway
 
 1. Nouveau projet Railway → Deploy from GitHub repo, Root Directory : `back`.
-2. `back/railway.json` lance `npm start` et utilise `/api/health` comme healthcheck.
+2. Railway lance `npm start`.
 3. Variables (onglet Variables) : `MONGODB_URI`, `NODE_ENV=production`, `ALLOWED_ORIGINS=<URL du frontend Vercel>`. Ne pas définir `PORT` : Railway le fournit.
 4. Générer un domaine public (Settings → Networking), vérifier les logs, puis tester `https://<backend-railway>/api/health`.
 
@@ -113,7 +116,7 @@ Les variables ne sont **pas** partagées entre Vercel et Railway : il faut les c
 
 ## Bascule automatique entre les deux backends
 
-`front/config.js` définit `PRIMARY_API_URL` (Railway), `FALLBACK_API_URL` (Vercel) et `TIMEOUT_MS`.
+Le haut de `front/index.js` définit `PRIMARY_API_URL` (Railway), `FALLBACK_API_URL` (Vercel) et `TIMEOUT_MS`.
 
 Pour chaque requête, `front/index.js` essaie le backend principal puis le backend de secours. Une tentative est considérée comme un échec en cas de :
 
@@ -128,7 +131,7 @@ Si les deux backends échouent, l'interface affiche un message d'erreur compréh
 | Test | Mise en place                                       | Résultat attendu                         |
 | ---- | --------------------------------------------------- | ---------------------------------------- |
 | A    | Railway disponible                                  | La requête aboutit sur Railway           |
-| B    | URL Railway volontairement erronée dans `config.js` | La requête bascule vers Vercel           |
+| B    | URL Railway volontairement erronée dans `index.js`  | La requête bascule vers Vercel           |
 | C    | Les deux URL erronées                               | Message « Les deux serveurs sont injoignables » |
 | D    | Même `POST` renvoyé deux fois                       | Un seul élément créé en base             |
 
@@ -137,7 +140,7 @@ Si les deux backends échouent, l'interface affiche un message d'erreur compréh
 Une requête `POST` peut avoir été enregistrée par le backend principal alors que la réponse n'est jamais arrivée (délai dépassé). La renvoyer au backend de secours créerait alors un doublon. Précautions mises en place :
 
 1. Chaque soumission du formulaire reçoit un identifiant unique `requestId` (`crypto.randomUUID()`), réutilisé pour toutes les tentatives de cette soumission.
-2. Le champ `requestId` du modèle Mongoose a un index **unique** : MongoDB refuse un second document avec le même identifiant.
+2. Le champ `requestId` du modèle Mongoose (`back/config/db.js`) a un index **unique** : MongoDB refuse un second document avec le même identifiant.
 3. `POST /api/items` renvoie l'élément existant (200) si le `requestId` a déjà été traité, au lieu d'en créer un nouveau (201).
 4. Les deux backends utilisent la **même** base MongoDB, sinon la vérification ne fonctionnerait pas d'un backend à l'autre.
 5. Le bouton est désactivé pendant l'envoi pour éviter les doubles clics.
@@ -151,5 +154,5 @@ Une requête `POST` peut avoir été enregistrée par le backend principal alors
 
 ## Sécurité
 
-- Aucun secret n'est commité : `.env` et `.env.*` sont exclus par `.gitignore` (seul `.env.example` est versionné).
+- Aucun secret n'est commité : `.env`, `.env.*` et `node_modules` sont exclus par `back/.gitignore`.
 - La règle réseau Atlas `0.0.0.0/0` est utilisée uniquement pour l'exercice : la retirer et changer le mot de passe de l'utilisateur après l'évaluation.

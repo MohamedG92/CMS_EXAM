@@ -1,4 +1,6 @@
-const { PRIMARY_API_URL, FALLBACK_API_URL, TIMEOUT_MS } = window.APP_CONFIG;
+const PRIMARY_API_URL = "http://localhost:3000";
+const FALLBACK_API_URL = "http://localhost:3000";
+const TIMEOUT_MS = 5000;
 const API_URLS = [PRIMARY_API_URL, FALLBACK_API_URL].filter(Boolean);
 
 const statusElement = document.getElementById("status");
@@ -16,8 +18,6 @@ function showMessage(element, text, type) {
     element.className = "message " + (type || "");
 }
 
-// Une tentative sur un backend : echoue en cas d'erreur reseau,
-// de delai depasse (AbortController) ou de reponse HTTP non reussie (!response.ok)
 async function requestOnce(baseUrl, path, options) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -42,7 +42,6 @@ async function requestOnce(baseUrl, path, options) {
     }
 }
 
-// Essaie le backend principal, puis bascule vers le backend de secours
 async function apiRequest(path, options = {}) {
     let lastError = null;
     for (const baseUrl of API_URLS) {
@@ -111,8 +110,6 @@ function generateRequestId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-// Identifiant unique d'une soumission : le meme est renvoye a chaque tentative
-// (bascule ou nouvel essai) pour que le backend ne cree pas de doublon.
 let pendingRequestId = null;
 form.addEventListener("input", () => {
     pendingRequestId = null;

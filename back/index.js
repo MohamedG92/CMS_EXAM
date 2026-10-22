@@ -4,13 +4,11 @@ const mongoose = require("mongoose");
 const dotenv = require('dotenv');
 dotenv.config();
 
-const connectDB = require('./config/db.js');
-const Item = require('./models/Item.js');
+const { connectDB, Item } = require('./config/db.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CORS : seules les origines de ALLOWED_ORIGINS sont autorisees (toutes si la variable est vide)
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
     .split(",")
     .map((origin) => origin.trim())
@@ -29,7 +27,6 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Les routes /api/items ont besoin de la base : on attend la connexion
 app.use('/api/items', async (req, res, next) => {
     try {
         await connectDB();
@@ -62,7 +59,6 @@ app.post('/api/items', async (req, res, next) => {
             return res.status(400).json({ error: "Le champ 'requestId' est invalide" });
         }
 
-        // Requete deja traitee (nouvelle tentative) : on renvoie l'element existant
         if (requestId) {
             const existing = await Item.findOne({ requestId });
             if (existing) {
@@ -73,7 +69,6 @@ app.post('/api/items', async (req, res, next) => {
         const item = await Item.create({ name, description, requestId });
         res.status(201).json(item);
     } catch (error) {
-        // Deux tentatives simultanees avec le meme requestId : l'index unique bloque la seconde
         if (error.code === 11000 && req.body.requestId) {
             const existing = await Item.findOne({ requestId: req.body.requestId });
             if (existing) {
@@ -84,12 +79,10 @@ app.post('/api/items', async (req, res, next) => {
     }
 });
 
-// Route inconnue
 app.use((req, res) => {
     res.status(404).json({ error: "Route introuvable" });
 });
 
-// Erreurs (JSON invalide, validation Mongoose, erreurs serveur)
 app.use((err, req, res, next) => {
     if (err.type === "entity.parse.failed") {
         return res.status(400).json({ error: "JSON invalide" });
@@ -102,8 +95,6 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: "Erreur interne du serveur" });
 });
 
-// Lancement direct (local, Railway) : connexion a MongoDB avant de demarrer le serveur.
-// Sur Vercel, le fichier est importe comme fonction : on exporte simplement l'app.
 if (require.main === module) {
     connectDB()
         .then(() => {
