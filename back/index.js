@@ -51,16 +51,35 @@ app.get('/api/items', async (req, res, next) => {
 
 app.post('/api/items', async (req, res, next) => {
     try {
-        const { name, description } = req.body || {};
+        const { name, description, requestId } = req.body || {};
         if (typeof name !== "string" || name.trim().length < 2) {
             return res.status(400).json({ error: "Le champ 'name' est obligatoire (2 caracteres minimum)" });
         }
         if (description !== undefined && typeof description !== "string") {
             return res.status(400).json({ error: "Le champ 'description' doit etre un texte" });
         }
-        const item = await Item.create({ name, description });
+        if (requestId !== undefined && (typeof requestId !== "string" || requestId.length > 100)) {
+            return res.status(400).json({ error: "Le champ 'requestId' est invalide" });
+        }
+
+        // Requete deja traitee (nouvelle tentative) : on renvoie l'element existant
+        if (requestId) {
+            const existing = await Item.findOne({ requestId });
+            if (existing) {
+                return res.status(200).json(existing);
+            }
+        }
+
+        const item = await Item.create({ name, description, requestId });
         res.status(201).json(item);
     } catch (error) {
+        // Deux tentatives simultanees avec le meme requestId : l'index unique bloque la seconde
+        if (error.code === 11000 && req.body.requestId) {
+            const existing = await Item.findOne({ requestId: req.body.requestId });
+            if (existing) {
+                return res.status(200).json(existing);
+            }
+        }
         next(error);
     }
 });

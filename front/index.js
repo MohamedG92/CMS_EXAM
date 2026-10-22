@@ -1,4 +1,5 @@
-const API_URL = window.APP_CONFIG.API_URL;
+const { PRIMARY_API_URL, FALLBACK_API_URL, TIMEOUT_MS } = window.APP_CONFIG;
+const API_URLS = [PRIMARY_API_URL, FALLBACK_API_URL].filter(Boolean);
 
 const statusElement = document.getElementById("status");
 const form = document.getElementById("item-form");
@@ -15,26 +16,54 @@ function showMessage(element, text, type) {
     element.className = "message " + (type || "");
 }
 
-// Appel API : leve une erreur si le reseau echoue ou si la reponse HTTP n'est pas OK
-async function apiRequest(path, options = {}) {
-    const response = await fetch(API_URL + path, {
-        ...options,
-        headers: { "Content-Type": "application/json", ...(options.headers || {}) }
-    });
-    const data = await response.json().catch(() => null);
-    if (!response.ok) {
-        throw new Error((data && data.error) || "Erreur HTTP " + response.status);
+// Une tentative sur un backend : echoue en cas d'erreur reseau,
+// de delai depasse (AbortController) ou de reponse HTTP non reussie (!response.ok)
+async function requestOnce(baseUrl, path, options) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+        const response = await fetch(baseUrl + path, {
+            ...options,
+            headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+            signal: controller.signal
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+            throw new Error((data && data.error) || "Erreur HTTP " + response.status);
+        }
+        return data;
+    } catch (error) {
+        if (error.name === "AbortError") {
+            throw new Error("delai de " + TIMEOUT_MS + " ms depasse");
+        }
+        throw error;
+    } finally {
+        clearTimeout(timer);
     }
-    return data;
+}
+
+// Essaie le backend principal, puis bascule vers le backend de secours
+async function apiRequest(path, options = {}) {
+    let lastError = null;
+    for (const baseUrl of API_URLS) {
+        try {
+            const data = await requestOnce(baseUrl, path, options);
+            return { data, baseUrl };
+        } catch (error) {
+            console.warn("Echec sur " + baseUrl + path + " : " + error.message);
+            lastError = error;
+        }
+    }
+    throw new Error("aucun backend disponible (" + lastError.message + ")");
 }
 
 async function checkHealth() {
     try {
-        const data = await apiRequest("/api/health");
-        statusElement.textContent = "Serveur : " + data.message;
+        const { data, baseUrl } = await apiRequest("/api/health");
+        statusElement.textContent = "Serveur : " + data.message + " (" + baseUrl + ")";
         statusElement.className = "status ok";
     } catch (error) {
-        statusElement.textContent = "Serveur injoignable";
+        statusElement.textContent = "Les deux serveurs sont injoignables. Reessayez plus tard.";
         statusElement.className = "status error";
     }
 }
@@ -67,13 +96,27 @@ function renderItems(items) {
 async function loadItems() {
     showMessage(listMessage, "Chargement...");
     try {
-        const items = await apiRequest("/api/items");
+        const { data: items } = await apiRequest("/api/items");
         renderItems(items);
         showMessage(listMessage, "");
     } catch (error) {
         showMessage(listMessage, "Erreur : impossible de charger les elements (" + error.message + ")", "error");
     }
 }
+
+function generateRequestId() {
+    if (window.crypto && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+// Identifiant unique d'une soumission : le meme est renvoye a chaque tentative
+// (bascule ou nouvel essai) pour que le backend ne cree pas de doublon.
+let pendingRequestId = null;
+form.addEventListener("input", () => {
+    pendingRequestId = null;
+});
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -85,13 +128,18 @@ form.addEventListener("submit", async (event) => {
         return;
     }
 
+    if (!pendingRequestId) {
+        pendingRequestId = generateRequestId();
+    }
+
     submitButton.disabled = true;
     showMessage(formMessage, "Envoi...");
     try {
         await apiRequest("/api/items", {
             method: "POST",
-            body: JSON.stringify({ name, description })
+            body: JSON.stringify({ name, description, requestId: pendingRequestId })
         });
+        pendingRequestId = null;
         form.reset();
         showMessage(formMessage, "Element ajoute.", "success");
         loadItems();

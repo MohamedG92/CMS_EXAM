@@ -14,6 +14,12 @@ const itemSchema = new mongoose.Schema(
             trim: true,
             maxlength: [500, "Le champ 'description' ne doit pas depasser 500 caracteres"],
             default: ""
+        },
+        // Identifiant envoye par le client : evite les doublons en cas de nouvelle tentative
+        requestId: {
+            type: String,
+            unique: true,
+            sparse: true
         }
     },
     { timestamps: true }

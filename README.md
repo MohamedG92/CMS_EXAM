@@ -111,6 +111,44 @@ Corps attendu pour `POST /api/items` :
 
 Les variables ne sont **pas** partagées entre Vercel et Railway : il faut les configurer sur chaque plateforme, avec la même `MONGODB_URI` pour que les deux backends affichent les mêmes données.
 
+## Bascule automatique entre les deux backends
+
+`front/config.js` définit `PRIMARY_API_URL` (Railway), `FALLBACK_API_URL` (Vercel) et `TIMEOUT_MS`.
+
+Pour chaque requête, `front/index.js` essaie le backend principal puis le backend de secours. Une tentative est considérée comme un échec en cas de :
+
+- erreur réseau (`fetch()` rejette) ;
+- délai dépassé (`AbortController` annule la requête après `TIMEOUT_MS`) ;
+- réponse HTTP non réussie (`response.ok` faux) : `fetch()` ne rejette pas les réponses 4xx/5xx, elles sont donc vérifiées explicitement.
+
+Si les deux backends échouent, l'interface affiche un message d'erreur compréhensible. Le bandeau en haut de page indique quel backend a répondu.
+
+### Tests
+
+| Test | Mise en place                                       | Résultat attendu                         |
+| ---- | --------------------------------------------------- | ---------------------------------------- |
+| A    | Railway disponible                                  | La requête aboutit sur Railway           |
+| B    | URL Railway volontairement erronée dans `config.js` | La requête bascule vers Vercel           |
+| C    | Les deux URL erronées                               | Message « Les deux serveurs sont injoignables » |
+| D    | Même `POST` renvoyé deux fois                       | Un seul élément créé en base             |
+
+### Éviter les doublons (test D)
+
+Une requête `POST` peut avoir été enregistrée par le backend principal alors que la réponse n'est jamais arrivée (délai dépassé). La renvoyer au backend de secours créerait alors un doublon. Précautions mises en place :
+
+1. Chaque soumission du formulaire reçoit un identifiant unique `requestId` (`crypto.randomUUID()`), réutilisé pour toutes les tentatives de cette soumission.
+2. Le champ `requestId` du modèle Mongoose a un index **unique** : MongoDB refuse un second document avec le même identifiant.
+3. `POST /api/items` renvoie l'élément existant (200) si le `requestId` a déjà été traité, au lieu d'en créer un nouveau (201).
+4. Les deux backends utilisent la **même** base MongoDB, sinon la vérification ne fonctionnerait pas d'un backend à l'autre.
+5. Le bouton est désactivé pendant l'envoi pour éviter les doubles clics.
+
+### Limites d'une architecture à deux backends
+
+- La bascule ne garantit pas que le backend de secours fonctionne : les deux doivent être testés séparément.
+- Si la base MongoDB est indisponible, les deux backends échouent ensemble (point de défaillance unique).
+- Un backend lent fait attendre l'utilisateur jusqu'à `TIMEOUT_MS` avant la bascule.
+- Les variables d'environnement doivent être maintenues à l'identique sur deux plateformes.
+
 ## Sécurité
 
 - Aucun secret n'est commité : `.env` et `.env.*` sont exclus par `.gitignore` (seul `.env.example` est versionné).
