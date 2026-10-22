@@ -10,7 +10,15 @@ const Item = require('./models/Item.js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// CORS : seules les origines de ALLOWED_ORIGINS sont autorisees (toutes si la variable est vide)
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+app.use(cors({
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true
+}));
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
@@ -75,14 +83,19 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: "Erreur interne du serveur" });
 });
 
-// Connexion a MongoDB avant de demarrer le serveur
-connectDB()
-    .then(() => {
-        app.listen(PORT, () => {
-            console.log("serveur fonctionne dans :" + PORT);
+// Lancement direct (local, Railway) : connexion a MongoDB avant de demarrer le serveur.
+// Sur Vercel, le fichier est importe comme fonction : on exporte simplement l'app.
+if (require.main === module) {
+    connectDB()
+        .then(() => {
+            app.listen(PORT, () => {
+                console.log("serveur fonctionne dans :" + PORT);
+            });
+        })
+        .catch((error) => {
+            console.error('MongoDB connection error:', error.message);
+            process.exit(1);
         });
-    })
-    .catch((error) => {
-        console.error('MongoDB connection error:', error.message);
-        process.exit(1);
-    });
+}
+
+module.exports = app;

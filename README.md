@@ -89,6 +89,28 @@ Corps attendu pour `POST /api/items` :
 | Backend Vercel    | _à compléter_ |
 | Backend Railway   | _à compléter_ |
 
+### Frontend sur Vercel
+
+1. Importer le dépôt GitHub dans Vercel.
+2. Root Directory : `front`, Framework Preset : `Other` (site statique, pas de build).
+3. Renseigner les URL des backends dans `front/config.js`.
+
+### Backend sur Vercel
+
+1. Nouveau projet Vercel à partir du même dépôt, Root Directory : `back`.
+2. `back/vercel.json` route toutes les requêtes vers `index.js`, qui exporte l'app Express.
+3. Variables (Settings → Environment Variables) : `MONGODB_URI`, `NODE_ENV=production`, `ALLOWED_ORIGINS=<URL du frontend Vercel>`.
+4. Tester : `https://<backend-vercel>/api/health`.
+
+### Backend sur Railway
+
+1. Nouveau projet Railway → Deploy from GitHub repo, Root Directory : `back`.
+2. `back/railway.json` lance `npm start` et utilise `/api/health` comme healthcheck.
+3. Variables (onglet Variables) : `MONGODB_URI`, `NODE_ENV=production`, `ALLOWED_ORIGINS=<URL du frontend Vercel>`. Ne pas définir `PORT` : Railway le fournit.
+4. Générer un domaine public (Settings → Networking), vérifier les logs, puis tester `https://<backend-railway>/api/health`.
+
+Les variables ne sont **pas** partagées entre Vercel et Railway : il faut les configurer sur chaque plateforme, avec la même `MONGODB_URI` pour que les deux backends affichent les mêmes données.
+
 ## Sécurité
 
 - Aucun secret n'est commité : `.env` et `.env.*` sont exclus par `.gitignore` (seul `.env.example` est versionné).
