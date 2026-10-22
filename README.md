@@ -7,7 +7,7 @@ Petite application MERN : une API Node.js/Express connectée à MongoDB Atlas vi
 - Lister les éléments enregistrés en base (`GET /api/items`)
 - Ajouter un élément via un formulaire (`POST /api/items`)
 - Vérifier l'état du serveur (`GET /api/health`)
-- Déployer le frontend sur Vercel et le backend sur Vercel + Render
+- Déployer le frontend sur Vercel et le backend sur Vercel + un serveur Ubuntu personnel
 
 ## Structure
 
@@ -59,7 +59,7 @@ Frontend : ouvrir `front/index.html` avec un serveur statique (par ex. l'extensi
 
 ## Variables d'environnement
 
-À définir dans `back/.env` en local, et dans les tableaux de bord Vercel / Render en production. Le fichier `.env` n'est jamais commité.
+À définir dans `back/.env` en local, et dans les tableau de bord Vercel / sur le serveur en production. Le fichier `.env` n'est jamais commité.
 
 | Variable          | Obligatoire | Description                                                           |
 | ----------------- | ----------- | --------------------------------------------------------------------- |
@@ -90,7 +90,7 @@ Corps attendu pour `POST /api/items` :
 | ----------------- | ------------ |
 | Frontend (Vercel) | https://cmsexam-front.vercel.app |
 | Backend Vercel    | https://mohamed-iraqi-cms.vercel.app/api/health |
-| Backend Render    | _à compléter_ |
+| Backend serveur   | https://velaria-cosmetics.duckdns.org/cms-api/api/health |
 
 ### Frontend sur Vercel
 
@@ -105,15 +105,34 @@ Corps attendu pour `POST /api/items` :
 3. Variables (Settings → Environment Variables) : `MONGODB_URI`, `NODE_ENV=production`, `ALLOWED_ORIGINS=https://cmsexam-front.vercel.app`.
 4. Tester : `https://<backend-vercel>/api/health`.
 
-### Backend sur Render
+### Backend sur un serveur Ubuntu (Docker + Apache)
 
-1. New + → Web Service → dépôt GitHub, Root Directory : `back`.
-2. Runtime : Node, Build Command : `npm install`, Start Command : `npm start`.
-3. Variables (Environment) : `MONGODB_URI`, `NODE_ENV=production`, `ALLOWED_ORIGINS=https://cmsexam-front.vercel.app`. Ne pas définir `PORT` : Render le fournit.
-4. Health Check Path : `/api/health`. Vérifier les logs, puis tester `https://<backend-render>.onrender.com/api/health`.
-5. Offre gratuite : le service se met en veille après 15 minutes sans trafic ; la première requête peut prendre jusqu'à une minute.
+Remplace Railway/Render : le même code backend tourne sur un serveur Ubuntu personnel.
 
-Les variables ne sont **pas** partagées entre Vercel et Render : il faut les configurer sur chaque plateforme, avec la même `MONGODB_URI` pour que les deux backends affichent les mêmes données.
+1. Cloner le dépôt sur le serveur : `git clone https://github.com/MohamedG92/CMS_EXAM.git ~/cms-exam`.
+2. Créer `~/cms-exam/back/.env` avec `MONGODB_URI` (`chmod 600`, jamais commité).
+3. Lancer le backend dans un conteneur Node, redémarré automatiquement :
+
+   ```bash
+   docker run -d --name cms-exam-back --restart unless-stopped \
+     -v "$HOME/cms-exam/back:/app" -w /app \
+     -e PORT=3005 -e NODE_ENV=production -e ALLOWED_ORIGINS=https://cmsexam-front.vercel.app \
+     -p 127.0.0.1:3005:3005 \
+     node:22-alpine sh -c "npm ci --omit=dev && npm start"
+   ```
+
+4. Apache (HTTPS, certificat Let's Encrypt) redirige `/cms-api/` vers le conteneur :
+
+   ```
+   ProxyPass /cms-api/ http://127.0.0.1:3005/
+   ProxyPassReverse /cms-api/ http://127.0.0.1:3005/
+   ```
+
+   (`sudo a2enmod proxy proxy_http`, `sudo a2enconf cms-api`, `sudo systemctl reload apache2`)
+5. Vérifier les logs (`docker logs cms-exam-back`) puis tester `https://velaria-cosmetics.duckdns.org/cms-api/api/health`.
+6. Mise à jour : `cd ~/cms-exam && git pull && docker restart cms-exam-back`.
+
+Les variables ne sont **pas** partagées entre Vercel et le serveur : elles sont configurées séparément sur chaque plateforme, avec la même `MONGODB_URI` pour que les deux backends affichent les mêmes données.
 
 ## Sécurité
 
