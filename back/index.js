@@ -31,11 +31,18 @@ app.get('/api', (req, res) => {
 });
 
 app.get('/api/health', async (req, res) => {
-    await connectDB().catch(() => null);
+    let database = "disconnected";
+    try {
+        await connectDB();
+        await mongoose.connection.db.admin().ping();
+        database = "connected";
+    } catch (error) {
+        console.error('MongoDB ping error:', error.message);
+    }
     res.json({
         status: "ok",
         message: "Le serveur repond",
-        database: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+        database
     });
 });
 
