@@ -21,7 +21,7 @@ mern-iraqi-mohamed/
 ├── front/
 │   ├── index.html
 │   ├── index.css
-│   └── index.js           # formulaire et liste des éléments
+│   └── index.js           # URL du backend (API_URL) + appels API avec fetch()
 └── README.md
 ```
 
