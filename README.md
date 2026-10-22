@@ -7,7 +7,7 @@ Petite application MERN : une API Node.js/Express connectée à MongoDB Atlas vi
 - Lister les éléments enregistrés en base (`GET /api/items`)
 - Ajouter un élément via un formulaire (`POST /api/items`)
 - Vérifier l'état du serveur (`GET /api/health`)
-- Déployer le frontend sur Vercel et le backend sur Vercel + Railway
+- Déployer le frontend sur Vercel et le backend sur Vercel + Render
 
 ## Structure
 
@@ -34,8 +34,8 @@ mern-iraqi-mohamed/
 ## Installation
 
 ```bash
-git clone <URL_DU_DEPOT_GITHUB>
-cd mern-iraqi-mohamed/back
+git clone https://github.com/MohamedG92/CMS_EXAM.git
+cd CMS_EXAM/back
 npm install
 ```
 
@@ -59,7 +59,7 @@ Frontend : ouvrir `front/index.html` avec un serveur statique (par ex. l'extensi
 
 ## Variables d'environnement
 
-À définir dans `back/.env` en local, et dans les tableaux de bord Vercel / Railway en production. Le fichier `.env` n'est jamais commité.
+À définir dans `back/.env` en local, et dans les tableaux de bord Vercel / Render en production. Le fichier `.env` n'est jamais commité.
 
 | Variable          | Obligatoire | Description                                                           |
 | ----------------- | ----------- | --------------------------------------------------------------------- |
@@ -88,30 +88,32 @@ Corps attendu pour `POST /api/items` :
 
 | Service           | URL          |
 | ----------------- | ------------ |
-| Frontend (Vercel) | _à compléter_ |
-| Backend Vercel    | _à compléter_ |
-| Backend Railway   | _à compléter_ |
+| Frontend (Vercel) | https://cmsexam-front.vercel.app |
+| Backend Vercel    | https://mohamed-iraqi-cms.vercel.app/api/health |
+| Backend Render    | _à compléter_ |
 
 ### Frontend sur Vercel
 
 1. Importer le dépôt GitHub dans Vercel.
-2. Root Directory : `front`, Framework Preset : `Other` (site statique, pas de build).
+2. Root Directory : `front`, Framework Preset : `Other` (site statique, pas de build, aucune variable d'environnement).
+3. L'URL du backend appelé est définie par `API_URL` en haut de `front/index.js`.
 
 ### Backend sur Vercel
 
 1. Nouveau projet Vercel à partir du même dépôt, Root Directory : `back`.
 2. `index.js` exporte l'app Express (`module.exports = app`).
-3. Variables (Settings → Environment Variables) : `MONGODB_URI`, `NODE_ENV=production`, `ALLOWED_ORIGINS=<URL du frontend Vercel>`.
+3. Variables (Settings → Environment Variables) : `MONGODB_URI`, `NODE_ENV=production`, `ALLOWED_ORIGINS=https://cmsexam-front.vercel.app`.
 4. Tester : `https://<backend-vercel>/api/health`.
 
-### Backend sur Railway
+### Backend sur Render
 
-1. Nouveau projet Railway → Deploy from GitHub repo, Root Directory : `back`.
-2. Railway lance `npm start`.
-3. Variables (onglet Variables) : `MONGODB_URI`, `NODE_ENV=production`, `ALLOWED_ORIGINS=<URL du frontend Vercel>`. Ne pas définir `PORT` : Railway le fournit.
-4. Générer un domaine public (Settings → Networking), vérifier les logs, puis tester `https://<backend-railway>/api/health`.
+1. New + → Web Service → dépôt GitHub, Root Directory : `back`.
+2. Runtime : Node, Build Command : `npm install`, Start Command : `npm start`.
+3. Variables (Environment) : `MONGODB_URI`, `NODE_ENV=production`, `ALLOWED_ORIGINS=https://cmsexam-front.vercel.app`. Ne pas définir `PORT` : Render le fournit.
+4. Health Check Path : `/api/health`. Vérifier les logs, puis tester `https://<backend-render>.onrender.com/api/health`.
+5. Offre gratuite : le service se met en veille après 15 minutes sans trafic ; la première requête peut prendre jusqu'à une minute.
 
-Les variables ne sont **pas** partagées entre Vercel et Railway : il faut les configurer sur chaque plateforme, avec la même `MONGODB_URI` pour que les deux backends affichent les mêmes données.
+Les variables ne sont **pas** partagées entre Vercel et Render : il faut les configurer sur chaque plateforme, avec la même `MONGODB_URI` pour que les deux backends affichent les mêmes données.
 
 ## Sécurité
 
