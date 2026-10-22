@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MERN Items</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <header class="header">
+        <h1>MERN Items</h1>
+        <p id="status" class="status">Verification du serveur...</p>
+    </header>
+
+    <main class="container">
+        <section class="card">
+            <h2>Ajouter un element</h2>
+            <form id="item-form" novalidate>
+                <label for="name">Nom</label>
+                <input id="name" name="name" type="text" minlength="2" maxlength="100" required placeholder="Ex : Livre">
+
+                <label for="description">Description</label>
+                <textarea id="description" name="description" maxlength="500" rows="3" placeholder="Optionnel"></textarea>
+
+                <button id="submit-btn" type="submit">Ajouter</button>
+            </form>
+            <p id="form-message" class="message" role="alert"></p>
+        </section>
+
+        <section class="card">
+            <div class="list-header">
+                <h2>Elements</h2>
+                <button id="refresh-btn" type="button" class="secondary">Actualiser</button>
+            </div>
+            <p id="list-message" class="message" role="alert"></p>
+            <ul id="item-list" class="item-list"></ul>
+        </section>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
