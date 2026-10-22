@@ -15,21 +15,7 @@ body {
 }
 
 .header h1 {
-    margin: 0 0 8px;
-}
-
-.status {
     margin: 0;
-    font-size: 0.95rem;
-    color: #52606d;
-}
-
-.status.ok {
-    color: #2f855a;
-}
-
-.status.error {
-    color: #c53030;
 }
 
 .container {
@@ -93,20 +79,6 @@ button:hover {
     background: #2b6cb0;
 }
 
-button:disabled {
-    background: #a0aec0;
-    cursor: not-allowed;
-}
-
-button.secondary {
-    background: #e2e8f0;
-    color: #1f2933;
-}
-
-button.secondary:hover {
-    background: #cbd5e0;
-}
-
 .message {
     min-height: 1.2em;
     margin: 12px 0 0;
@@ -119,17 +91,6 @@ button.secondary:hover {
 
 .message.success {
     color: #2f855a;
-}
-
-.list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.list-header h2 {
-    margin: 0;
 }
 
 .item-list {
